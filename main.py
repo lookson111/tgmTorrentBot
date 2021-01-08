@@ -162,8 +162,7 @@ class MainWindow(QMainWindow):
     # переопредение метода closeEvent, для перехвата события закрытия окна
     # окно будет закрыватья только в том случае если нет, елси нет галочки на чекбосксе
     def closeEvent(self, event):
-        global threadStop
-        threadStop = True
+        self.stopBot()
         self.saveSettingss()
 
     def hideEvent(self, event):
