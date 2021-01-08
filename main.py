@@ -5,8 +5,9 @@ import time
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QGridLayout, QWidget, QCheckBox, QSystemTrayIcon, \
     QSpacerItem, QSizePolicy, QMenu, QAction, QStyle, qApp
 from PyQt5.QtCore import QSize
+import sys
+from mainwind import Ui_Dialog
 
-# bot = telebot.TeleBot(config.TOKEN)
 bot = telebot.TeleBot(config.TOKEN)  # You can set parse_mode by default. HTML or MARKDOWN
 
 
@@ -52,42 +53,13 @@ def handle_messages(messages):
 
 
 class MainWindow(QMainWindow):
-    """
-        Обьявление чекбокса и иконки системного трея
-        Инициализироваться будут в конструкторе
-    """
     check_box = None
     tray_icon = None
-
-    # переопределяем констрктор класса
     def __init__(self):
-        # обязательно вызываем метод сепер класса
         QMainWindow.__init__(self)
-
-        self.setMinimumSize(QSize(480, 80))
-        self.setWindowTitle('Telegram Bot Application')
-        central_widget = QWidget(self)
-        self.setCentralWidget(central_widget)
-
-        grid_layout = QGridLayout(self)
-        central_widget.setLayout(grid_layout)
-        grid_layout.addWidget(QLabel("Application can minimize to tray", self), 0, 0)
-
-        # Добавляем чекбокс минимизации в трей
-        self.check_box = QCheckBox("Minimize to Tray")
-        grid_layout.addWidget(self.check_box, 1, 0)
-        grid_layout.addItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Expanding), 2, 0)
-
-        # инициализация сворачивания в трей
-        self.tray_icon = QSystemTrayIcon(self)
-        self.tray_icon.setIcon(self.style().standardIcon(QStyle.SP_ComputerIcon))
-
-        '''
-            Обьявим о добавим действия для работы с икнонкой системного трея
-            show - показать окно
-            hide - скрыть окно
-            exit - выход из программы
-        '''
+        #super(MainWindow, self).__init__()
+        self.ui = Ui_Dialog()
+        self.ui.setupUi(self)
         show_action = QAction("Show", self)
         hide_action = QAction("Hide", self)
         exit_action = QAction("Exit", self)
@@ -98,13 +70,18 @@ class MainWindow(QMainWindow):
         tray_menu.addAction(show_action)
         tray_menu.addAction(hide_action)
         tray_menu.addAction(exit_action)
+        # инициализация сворачивания в трей
+        self.tray_icon = QSystemTrayIcon(self)
+        self.tray_icon.setIcon(self.style().standardIcon(QStyle.SP_ComputerIcon))
+
         self.tray_icon.setContextMenu(tray_menu)
         self.tray_icon.show()
+
 
     # переопредение метода closeEvent, для перехвата события закрытия окна
     # окно будет закрыватья только в том случае если нет, елси нет галочки на чекбосксе
     def closeEvent(self, event):
-        if self.check_box.isChecked():
+        if self.ui.trayCeckBox.isChecked():
             event.ignore()
             self.hide()
             self.tray_icon.showMessage(
@@ -114,21 +91,18 @@ class MainWindow(QMainWindow):
                 2000
             )
 
-
 if __name__ == '__main__':
     # bot.infinity_polling()
     # bot.set_update_listener(handle_messages)
-    import sys
     app = QApplication(sys.argv)
-    mw = QMainWindow()
+    mw = MainWindow()
     mw.show()
-    '''
-    while True:
-        try:
-            bot.polling(none_stop=True)
-
-        except Exception as e:
-            print(e)
-            time.sleep(3)
-    '''
     sys.exit(app.exec())
+    # while True:
+    #     try:
+    #         bot.polling(none_stop=True)
+    #
+    #     except Exception as e:
+    #         print(e)
+    #         time.sleep(3)
+
