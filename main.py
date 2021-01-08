@@ -1,3 +1,13 @@
+"""
+    Написано Иматдиновым Ринатом
+    работает на python 3.7.9
+"""
+
+
+
+
+
+
 import telebot
 import config
 import os
@@ -71,18 +81,19 @@ def handle_messages(messages):
 
 
 def thread_function(name):
+    log.append("Поток запущен, бот работает")
     while True:
         if threadStop:
-            bot.stop_polling()
+            # bot.stop_polling()
+            log.append("Бот остановлен: поток")
             break
         try:
             bot.polling(none_stop=True)
 
         except Exception as e:
             print(e)
-            log.append(e)
+            log.append("Ошбика")
             time.sleep(3)
-
 
 class MainWindow(QMainWindow):
     check_box = None
@@ -131,9 +142,20 @@ class MainWindow(QMainWindow):
         if self.ui.autorunBotcheckBox.isChecked():
             self.startBot()
 
+        if self.ui.trayCeckBox.isChecked():
+            self.hide()
+            self.tray_icon.showMessage(
+                "Tray program",
+                "Application is minimized to tray",
+                QSystemTrayIcon.Information,
+                2000
+            )
+
     # переопредение метода closeEvent, для перехвата события закрытия окна
     # окно будет закрыватья только в том случае если нет, елси нет галочки на чекбосксе
     def closeEvent(self, event):
+        global threadStop
+        threadStop = True
         self.saveSettingss()
 
     def hideEvent(self, event):
@@ -148,6 +170,9 @@ class MainWindow(QMainWindow):
             )
         self.saveSettingss()
 
+    def showEvent(self, event):
+        self.show()
+
     def startBot(self):
         global threadStop
         threadStop = False
@@ -156,7 +181,7 @@ class MainWindow(QMainWindow):
 
     def stopBot(self):
         global threadStop
-        bot.stop_polling()
+        bot.stop_bot()
         threadStop = True
         self.ui.logTextBrowser.append('Бот остановлен')
 
