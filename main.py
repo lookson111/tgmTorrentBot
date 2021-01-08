@@ -194,7 +194,7 @@ class MainWindow(QMainWindow):
         self.ui.logTextBrowser.append('Бот остановлен')
 
     def saveSettingss(self):
-        config = configparser.ConfigParser()
+        configp = configparser.ConfigParser()
         global settingsBot
 
         if self.ui.trayCeckBox.isChecked():
@@ -207,22 +207,27 @@ class MainWindow(QMainWindow):
         else:
             settingsBot.autostartBot = "no"
 
-        config['DEFAULT'] = {'minimizeToTray': settingsBot.minimizeTray,
+        configp['DEFAULT'] = {'minimizeToTray': settingsBot.minimizeTray,
                              'autostartBot': settingsBot.autostartBot,
                              'savePath': settingsBot.downloadPath}
-        with open('settings.ini', 'w') as configfile:
-            config.write(configfile)
+        setdir = config.SAVESETTINGSPATH % os.environ['APPDATA']
+        if not os.path.exists(setdir):
+            os.mkdir(setdir)       
+        setdir = setdir + '\\settings.ini'
+        with open(setdir, 'w') as configfile:
+            configp.write(configfile)
 
     def loadSetting(self):
-        if not os.path.exists('settings.ini'):
+        setdir = (config.SAVESETTINGSPATH % os.environ['APPDATA']) + '\\settings.ini'
+        if not os.path.isfile(setdir):
             return
-        config = configparser.ConfigParser()
-        config.read('settings.ini')
-        if config.get("DEFAULT", "minimizeToTray") == "yes":
+        configp = configparser.ConfigParser()
+        configp.read(setdir)
+        if configp.get("DEFAULT", "minimizeToTray") == "yes":
             self.ui.trayCeckBox.setChecked(True)
-        if config.get("DEFAULT", "autostartBot") == "yes":
+        if configp.get("DEFAULT", "autostartBot") == "yes":
             self.ui.autorunBotcheckBox.setChecked(True)
-        self.ui.pathLineEdit.setText(config.get("DEFAULT", "savePath"))
+        self.ui.pathLineEdit.setText(configp.get("DEFAULT", "savePath"))
 
 
 if __name__ == '__main__':
