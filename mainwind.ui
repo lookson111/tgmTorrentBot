@@ -7,8 +7,14 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>300</height>
+    <height>348</height>
    </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
   </property>
   <property name="windowTitle">
    <string>Бот</string>
@@ -17,7 +23,7 @@
    <property name="geometry">
     <rect>
      <x>230</x>
-     <y>260</y>
+     <y>310</y>
      <width>161</width>
      <height>32</height>
     </rect>
@@ -35,14 +41,17 @@
      <x>10</x>
      <y>10</y>
      <width>381</width>
-     <height>241</height>
+     <height>291</height>
     </rect>
    </property>
    <layout class="QGridLayout" name="gridLayout">
     <property name="spacing">
      <number>4</number>
     </property>
-    <item row="2" column="0">
+    <item row="4" column="0">
+     <widget class="QLineEdit" name="pathLineEdit"/>
+    </item>
+    <item row="5" column="0">
      <widget class="QTextBrowser" name="logTextBrowser"/>
     </item>
     <item row="1" column="0">
@@ -59,13 +68,27 @@
       </property>
      </widget>
     </item>
+    <item row="2" column="0">
+     <widget class="QCheckBox" name="autorunBotcheckBox">
+      <property name="text">
+       <string>Автозапуск бота при старте программы</string>
+      </property>
+     </widget>
+    </item>
+    <item row="3" column="0">
+     <widget class="QLabel" name="label_2">
+      <property name="text">
+       <string>Пусть сохранения файлов:</string>
+      </property>
+     </widget>
+    </item>
    </layout>
   </widget>
   <widget class="QPushButton" name="startBot">
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>260</y>
+     <y>310</y>
      <width>75</width>
      <height>23</height>
     </rect>
@@ -77,8 +100,8 @@
   <widget class="QPushButton" name="stopBot">
    <property name="geometry">
     <rect>
-     <x>100</x>
-     <y>260</y>
+     <x>90</x>
+     <y>310</y>
      <width>75</width>
      <height>23</height>
     </rect>

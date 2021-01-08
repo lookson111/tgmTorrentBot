@@ -7,8 +7,26 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QGridLayout, QWid
 from PyQt5.QtCore import QSize
 import sys
 from mainwind import Ui_Dialog
+import threading
+import configparser
+
+threadStop = False
+log = None
 
 bot = telebot.TeleBot(config.TOKEN)  # You can set parse_mode by default. HTML or MARKDOWN
+
+
+class settingsBotCl:
+    minimizeTray = "no"
+    autostartBot = "no"
+    downloadPath = ''
+
+    # конструктор
+    def __init__(self, dP):
+        self.downloadPath = dP  # устанавливаем имя
+
+
+settingsBot = settingsBotCl(config.DOWNLOADPATH)
 
 
 @bot.message_handler(commands=['start', 'help'])
@@ -52,21 +70,49 @@ def handle_messages(messages):
         bot.reply_to(message, 'Hi')
 
 
+def thread_function(name):
+    while True:
+        if threadStop:
+            bot.stop_polling()
+            break
+        try:
+            bot.polling(none_stop=True)
+
+        except Exception as e:
+            print(e)
+            log.append(e)
+            time.sleep(3)
+
+
 class MainWindow(QMainWindow):
     check_box = None
     tray_icon = None
+
+    botThread = threading.Thread(target=thread_function, args=(1,))
+
     def __init__(self):
         QMainWindow.__init__(self)
-        #super(MainWindow, self).__init__()
+        # super(MainWindow, self).__init__()
         self.ui = Ui_Dialog()
         self.ui.setupUi(self)
+        self.ui.startBot.clicked.connect(self.startBot)
+        self.ui.stopBot.clicked.connect(self.stopBot)
+
+        start_action = QAction("Start", self)
+        stop_action = QAction('Stop', self)
         show_action = QAction("Show", self)
         hide_action = QAction("Hide", self)
         exit_action = QAction("Exit", self)
+
+        start_action.triggered.connect(self.startBot)
+        stop_action.triggered.connect(self.stopBot)
         show_action.triggered.connect(self.show)
         hide_action.triggered.connect(self.hide)
         exit_action.triggered.connect(qApp.quit)
+
         tray_menu = QMenu()
+        tray_menu.addAction(start_action)
+        tray_menu.addAction(stop_action)
         tray_menu.addAction(show_action)
         tray_menu.addAction(hide_action)
         tray_menu.addAction(exit_action)
@@ -77,10 +123,20 @@ class MainWindow(QMainWindow):
         self.tray_icon.setContextMenu(tray_menu)
         self.tray_icon.show()
 
+        global log
+        log = self.ui.logTextBrowser
+
+        # восстановление настроек
+        self.loadSetting()
+        if self.ui.autorunBotcheckBox.isChecked():
+            self.startBot()
 
     # переопредение метода closeEvent, для перехвата события закрытия окна
     # окно будет закрыватья только в том случае если нет, елси нет галочки на чекбосксе
     def closeEvent(self, event):
+        self.saveSettingss()
+
+    def hideEvent(self, event):
         if self.ui.trayCeckBox.isChecked():
             event.ignore()
             self.hide()
@@ -90,6 +146,51 @@ class MainWindow(QMainWindow):
                 QSystemTrayIcon.Information,
                 2000
             )
+        self.saveSettingss()
+
+    def startBot(self):
+        global threadStop
+        threadStop = False
+        self.botThread.start()
+        self.ui.logTextBrowser.append('Бот запущен')
+
+    def stopBot(self):
+        global threadStop
+        bot.stop_polling()
+        threadStop = True
+        self.ui.logTextBrowser.append('Бот остановлен')
+
+    def saveSettingss(self):
+        config = configparser.ConfigParser()
+        global settingsBot
+
+        if self.ui.trayCeckBox.isChecked():
+            settingsBot.minimizeTray = "yes"
+        else:
+            settingsBot.minimizeTray = "no"
+
+        if self.ui.autorunBotcheckBox.isChecked():
+            settingsBot.autostartBot = "yes"
+        else:
+            settingsBot.autostartBot = "no"
+
+        config['DEFAULT'] = {'minimizeToTray': settingsBot.minimizeTray,
+                             'autostartBot': settingsBot.autostartBot,
+                             'savePath': settingsBot.downloadPath}
+        with open('settings.ini', 'w') as configfile:
+            config.write(configfile)
+
+    def loadSetting(self):
+        if not os.path.exists('settings.ini'):
+            return
+        config = configparser.ConfigParser()
+        config.read('settings.ini')
+        if config.get("DEFAULT", "minimizeToTray") == "yes":
+            self.ui.trayCeckBox.setChecked(True)
+        if config.get("DEFAULT", "autostartBot") == "yes":
+            self.ui.autorunBotcheckBox.setChecked(True)
+        self.ui.pathLineEdit.setText(config.get("DEFAULT", "savePath"))
+
 
 if __name__ == '__main__':
     # bot.infinity_polling()
@@ -98,11 +199,3 @@ if __name__ == '__main__':
     mw = MainWindow()
     mw.show()
     sys.exit(app.exec())
-    # while True:
-    #     try:
-    #         bot.polling(none_stop=True)
-    #
-    #     except Exception as e:
-    #         print(e)
-    #         time.sleep(3)
-
