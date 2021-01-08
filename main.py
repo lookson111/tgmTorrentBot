@@ -3,11 +3,6 @@
     работает на python 3.7.9
 """
 
-
-
-
-
-
 import telebot
 import config
 import os
@@ -19,6 +14,7 @@ import sys
 from mainwind import Ui_Dialog
 import threading
 import configparser
+import psutil
 
 threadStop = False
 log = None
@@ -65,6 +61,16 @@ def start_message(message):
     mes = "Файл сохранен в " + config.DOWNLOADPATH
     bot.send_message(message.chat.id, mes)
 
+    # проверим запущен ли bittorrent
+    find_process = False
+    for proc in psutil.process_iter():
+        name = proc.name()
+        if name.find(config.TORRENTCLIENTNAME) >= 0:
+            find_process = True
+            break
+    # если торрент клиент не запщен то запускаем
+    if not find_process:
+        os.startfile(config.TORRENTCLIENTPATH)
 
 @bot.message_handler(func=lambda message: True)
 def echo_all(message):
