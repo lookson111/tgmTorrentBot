@@ -5,6 +5,7 @@
 
 import telebot
 import config
+import bottoken
 import os
 import time
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QGridLayout, QWidget, QCheckBox, QSystemTrayIcon, \
@@ -19,7 +20,7 @@ import psutil
 threadStop = False
 log = None
 
-bot = telebot.TeleBot(config.TOKEN)  # You can set parse_mode by default. HTML or MARKDOWN
+bot = telebot.TeleBot(bottoken.TOKEN)  # You can set parse_mode by default. HTML or MARKDOWN
 
 
 class settingsBotCl:
@@ -71,6 +72,7 @@ def start_message(message):
     # если торрент клиент не запщен то запускаем
     if not find_process:
         os.startfile(config.TORRENTCLIENTPATH)
+
 
 @bot.message_handler(func=lambda message: True)
 def echo_all(message):
