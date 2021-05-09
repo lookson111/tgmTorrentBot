@@ -18,7 +18,6 @@ import configparser
 import psutil
 from qbittorrent import Client
 
-qb = Client('http://127.0.0.1:8080/')
 
 threadStop = False
 log = None
@@ -26,6 +25,12 @@ log = None
 bot = telebot.TeleBot(bottoken.TOKEN)  # You can set parse_mode by default. HTML or MARKDOWN
 downloadTorrents = []
 
+if sys.platform.startswith('win32'):
+    # FreeBSD-specific code here...
+    settingPath = 'APPDATA'
+elif sys.platform.startswith('linux'):
+    # Linux-specific code here...
+    settingPath = 'HOME'
 
 class settingsBotCl:
     minimizeTray = "no"
@@ -47,6 +52,8 @@ def start_message(message):
 
 @bot.message_handler(commands=['qtinfo'])
 def tor_info_message(message):
+    startqtrnt()
+    qb = Client('http://localhost:8080/')
     qb.login('admin', '1karina1')
     torrents = qb.torrents()
     for torrent in torrents:
@@ -56,6 +63,8 @@ def tor_info_message(message):
 
 @bot.message_handler(commands=['qtDownloadInfo'])
 def tor_info_message(message):
+    startqtrnt()
+    qb = Client('http://localhost:8080/')
     qb.login('admin', '1karina1')
     torrents = qb.torrents(filter='downloading')
     if not torrents:
@@ -68,6 +77,7 @@ def tor_info_message(message):
 
 @bot.message_handler(content_types='document')
 def torrent_message(message):
+    log.append("Получен торрент файл")
     if message.document.file_name.find(".torrent") < 0:
         mes = "Прислан не тот документ"
         bot.send_message(message.chat.id, mes)
@@ -82,7 +92,6 @@ def torrent_message(message):
         os.mkdir(config.DOWNLOADPATH)
     downloaded_file = bot.download_file(newFile.file_path)
 
-
     # src = message.document.file_name
     # with open(config.DOWNLOADPATH + "/" + src, 'wb') as new_file:
     #     new_file.write(downloaded_file)
@@ -90,16 +99,9 @@ def torrent_message(message):
     # bot.send_message(message.chat.id, mes)
 
     # проверим запущен ли bittorrent
-    find_process = False
-    for proc in psutil.process_iter():
-        name = proc.name()
-        if name.find(config.TORRENTCLIENTNAME) >= 0:
-            find_process = True
-            break
-    # если торрент клиент не запщен то запускаем
-    if not find_process:
-        os.startfile(config.TORRENTCLIENTPATH)
-        time.sleep(3)
+    startqtrnt()
+
+    qb = Client('http://localhost:8080/')
     qb.login('admin', '1karina1')
     downTorrents = qb.torrents(filter='downloading')
     qb.download_from_file(downloaded_file)
@@ -131,6 +133,23 @@ def echo_all(message):
     mes = 'Веедена не верная команда: \"' + message.text + '\".'
     bot.reply_to(message, mes)
 
+def startqtrnt():
+    find_process = False
+    for proc in psutil.process_iter():
+        name = proc.name()
+        if name.find(config.TORRENTCLIENTNAME) >= 0:
+            find_process = True
+            break
+    # если торрент клиент не запщен то запускаем
+    if not find_process:
+        log.append("Запускаем торрент клиент")
+        if sys.platform.startswith('win32'):
+            os.startfile(config.TORRENTCLIENTPATH)
+            #time.sleep(3)
+        elif sys.platform.startswith('linux'):
+            os.system("qbittorrent")
+        time.sleep(10)
+        
 
 def handle_messages(messages):
     for message in messages:
@@ -165,6 +184,7 @@ def thread_torr(name):
             break
         try:
             cont = False
+            qb = Client('http://localhost:8080/')
             qb.login('admin', '1karina1')
             torrents = qb.torrents(filter='downloading')
             for dtor in downloadTorrents:
@@ -292,15 +312,19 @@ class MainWindow(QMainWindow):
         configp['DEFAULT'] = {'minimizeToTray': settingsBot.minimizeTray,
                              'autostartBot': settingsBot.autostartBot,
                              'savePath': settingsBot.downloadPath}
-        setdir = config.SAVESETTINGSPATH % os.environ['APPDATA']
+        setdir = config.SAVESETTINGSPATH % os.environ[settingPath]
         if not os.path.exists(setdir):
-            os.mkdir(setdir)       
-        setdir = setdir + '\\settings.ini'
+            os.mkdir(setdir)     
+        log.append("Сохраняем настройка путь:")
+        log.append(setdir)  
+        setdir = setdir + '/settings.ini'
         with open(setdir, 'w') as configfile:
             configp.write(configfile)
 
     def loadSetting(self):
-        setdir = (config.SAVESETTINGSPATH % os.environ['APPDATA']) + '\\settings.ini'
+        setdir = (config.SAVESETTINGSPATH % os.environ[settingPath]) + '/settings.ini'
+        log.append("Загружаем настройка путь:")
+        log.append(setdir)
         if not os.path.isfile(setdir):
             return
         configp = configparser.ConfigParser()
