@@ -23,6 +23,7 @@ threadStop = False
 log = None
 
 bot = telebot.TeleBot(bottoken.TOKEN)  # You can set parse_mode by default. HTML or MARKDOWN
+qbithost = 'http://localhost:8080/'
 downloadTorrents = []
 
 if sys.platform.startswith('win32'):
@@ -53,8 +54,10 @@ def start_message(message):
 @bot.message_handler(commands=['qtinfo'])
 def tor_info_message(message):
     startqtrnt()
-    qb = Client('http://localhost:8080/')
-    qb.login('admin', '1karina1')
+    qb = Client(qbithost)
+    print(bottoken.QbUser)
+    print(bottoken.QbPass)
+    qb.login(bottoken.QbUser, bottoken.QbPass)
     torrents = qb.torrents()
     for torrent in torrents:
         bot.send_message(message.chat.id, torrent['name'])
@@ -64,8 +67,10 @@ def tor_info_message(message):
 @bot.message_handler(commands=['qtDownloadInfo'])
 def tor_info_message(message):
     startqtrnt()
-    qb = Client('http://localhost:8080/')
-    qb.login('admin', '1karina1')
+    qb = Client(qbithost)
+    print(bottoken.QbUser)
+    print(bottoken.QbPass)
+    qb.login(bottoken.QbUser, bottoken.QbPass)
     torrents = qb.torrents(filter='downloading')
     if not torrents:
         bot.send_message(message.chat.id, 'Нет не загруженных торрентов')
@@ -101,8 +106,8 @@ def torrent_message(message):
     # проверим запущен ли bittorrent
     startqtrnt()
 
-    qb = Client('http://localhost:8080/')
-    qb.login('admin', '1karina1')
+    qb = Client(qbithost)
+    qb.login(bottoken.QbUser, bottoken.QbPass)
     downTorrents = qb.torrents(filter='downloading')
     qb.download_from_file(downloaded_file)
     time.sleep(2)
@@ -184,8 +189,10 @@ def thread_torr(name):
             break
         try:
             cont = False
-            qb = Client('http://localhost:8080/')
-            qb.login('admin', '1karina1')
+            qb = Client(qbithost)
+            print(bottoken.QbUser)
+            print(bottoken.QbPass)
+            qb.login(bottoken.QbUser, bottoken.QbPass)
             torrents = qb.torrents(filter='downloading')
             for dtor in downloadTorrents:
                 for tor in torrents:
