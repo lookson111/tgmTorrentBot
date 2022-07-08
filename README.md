@@ -1,11 +1,12 @@
 # tgmTorrentBot
 install modules:
-pytelegrambotapi pyqt5 psutil python-qbittorrent
+pip3 install pytelegrambotapi pyqt5 psutil python-qbittorrent
 
-createfile bottoken TOKEN
+создать файл bottoken 
+TOKEN = 'записать токен телеграмм бота' 
 
-Линукс 
-Через "Автоматически запускаемы приложения" длбавить 
+Автозапуск Linux 
+Через "Автоматически запускаемые приложения" добавить 
 /usr/bin/python3.8 /home/server/py/tgmTorrentBot/main.py
 
 
