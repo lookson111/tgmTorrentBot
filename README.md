@@ -2,6 +2,9 @@
 install modules:
 pip3 install pytelegrambotapi psutil python-qbittorrent pytesseract
 
+установить
+tesseract
+
 создать файл bottoken
 TOKEN = 'записать токен телеграмм бота'
 QbUser = 'имя юсера на веб qb'
