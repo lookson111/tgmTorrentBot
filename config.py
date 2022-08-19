@@ -1,5 +1,5 @@
 import sys
-DOWNLOADPATH = 'D:/Downloads'
+DOWNLOADPATH = 'DownloadTorrent'
 TORRENTCLIENTNAME = "qbitto"
 SAVESETTINGSPATH = '%s/TelegramBot'
 if sys.platform.startswith('win32'):
@@ -9,4 +9,5 @@ if sys.platform.startswith('win32'):
 elif sys.platform.startswith('linux'):
     # Linux-specific code here...
     settingPath = 'HOME'
-    TORRENTCLIENTPATH = "C:/Programms/qBittorrent/qbittorrent.exe"
+    TORRENTCLIENTPATH = ""
+    DOWNLOADPATH = 'DownloadTorrent'
