@@ -17,6 +17,8 @@ import threading
 import configparser
 import psutil
 from qbittorrent import Client
+import pytesseract
+from PIL import Image
 
 
 threadStop = False
@@ -83,54 +85,73 @@ def tor_info_message(message):
 @bot.message_handler(content_types='document')
 def torrent_message(message):
     log.append("Получен торрент файл")
-    if message.document.file_name.find(".torrent") < 0:
+    mes = 'Привет, ты прислал мне документ:' + message.document.file_name
+    bot.send_message(message.chat.id, mes)
+    if message.document.file_name.find(".torrent") > 0:
+        file_id = message.document.file_id
+        newFile = bot.get_file(file_id)
+
+        filepath = os.path.exists(config.DOWNLOADPATH)
+        if not filepath:
+            os.mkdir(config.DOWNLOADPATH)
+        downloaded_file = bot.download_file(newFile.file_path)
+
+        # src = message.document.file_name
+        # with open(config.DOWNLOADPATH + "/" + src, 'wb') as new_file:
+        #     new_file.write(downloaded_file)
+        # mes = "Файл сохранен в " + config.DOWNLOADPATH
+        # bot.send_message(message.chat.id, mes)
+
+        # проверим запущен ли bittorrent
+        startqtrnt()
+
+        qb = Client(qbithost)
+        qb.login(bottoken.QbUser, bottoken.QbPass)
+        downTorrents = qb.torrents(filter='downloading')
+        qb.download_from_file(downloaded_file)
+        time.sleep(2)
+        downAddedTorrents = qb.torrents(filter='downloading')
+        findtorr = {}
+        cont = False
+        # поиск добавленного файла
+        for addtorr in downAddedTorrents:
+            for notaddtorr in downTorrents:
+                if addtorr['name'] == notaddtorr['name']:
+                    #downAddedTorrents.remove(addtorr)
+                    #downTorrents.remove(notaddtorr)
+                    cont = True
+                    break
+            if cont:
+                cont = False
+                continue
+            findtorr = addtorr
+            break
+
+        if findtorr:
+            downloadTorrents.append({'userid': message.chat.id, 'name': findtorr['name']})
+        qb.logout()
+        
+    elif (message.document.file_name.find(".jpg") > 0) or (message.document.file_name.find(".png") > 0):
+        mes = "Прислана картинка конвертирую ее в тескт"
+        bot.send_message(message.chat.id, mes)
+        file_id = message.document.file_id
+        newFile = bot.get_file(file_id)
+        
+        filepath = os.path.exists(config.DOWNLOADPATH)
+        if not filepath:
+            os.mkdir(config.DOWNLOADPATH)
+        downloaded_file = bot.download_file(newFile.file_path)
+        # или вы можете использовать подушку
+        image = Image.open(downloaded_file)
+        # получаем строку
+        string = pytesseract.image_to_string(image, lang='rus+eng')
+        # печатаем
+        bot.send_message(message.chat.id, string)
+        return
+    else:
         mes = "Прислан не тот документ"
         bot.send_message(message.chat.id, mes)
         return
-    mes = 'Привет, ты прислал мне документ:' + message.document.file_name
-    bot.send_message(message.chat.id, mes)
-    file_id = message.document.file_id
-    newFile = bot.get_file(file_id)
-
-    filepath = os.path.exists(config.DOWNLOADPATH)
-    if not filepath:
-        os.mkdir(config.DOWNLOADPATH)
-    downloaded_file = bot.download_file(newFile.file_path)
-
-    # src = message.document.file_name
-    # with open(config.DOWNLOADPATH + "/" + src, 'wb') as new_file:
-    #     new_file.write(downloaded_file)
-    # mes = "Файл сохранен в " + config.DOWNLOADPATH
-    # bot.send_message(message.chat.id, mes)
-
-    # проверим запущен ли bittorrent
-    startqtrnt()
-
-    qb = Client(qbithost)
-    qb.login(bottoken.QbUser, bottoken.QbPass)
-    downTorrents = qb.torrents(filter='downloading')
-    qb.download_from_file(downloaded_file)
-    time.sleep(2)
-    downAddedTorrents = qb.torrents(filter='downloading')
-    findtorr = {}
-    cont = False
-    # поиск добавленного файла
-    for addtorr in downAddedTorrents:
-        for notaddtorr in downTorrents:
-            if addtorr['name'] == notaddtorr['name']:
-                #downAddedTorrents.remove(addtorr)
-                #downTorrents.remove(notaddtorr)
-                cont = True
-                break
-        if cont:
-            cont = False
-            continue
-        findtorr = addtorr
-        break
-
-    if findtorr:
-        downloadTorrents.append({'userid': message.chat.id, 'name': findtorr['name']})
-    qb.logout()
 
 
 @bot.message_handler(func=lambda message: True)
