@@ -8,11 +8,7 @@ import config
 import bottoken
 import os
 import time
-from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QGridLayout, QWidget, QCheckBox, QSystemTrayIcon, \
-    QSpacerItem, QSizePolicy, QMenu, QAction, QStyle, qApp
-from PyQt5.QtCore import QSize
 import sys
-from mainwind import Ui_Dialog
 import threading
 import configparser
 import psutil
@@ -22,7 +18,6 @@ from PIL import Image
 
 
 threadStop = False
-log = None
 
 bot = telebot.TeleBot(bottoken.TOKEN)  # You can set parse_mode by default. HTML or MARKDOWN
 qbithost = 'http://localhost:8080/'
@@ -35,18 +30,18 @@ elif sys.platform.startswith('linux'):
     # Linux-specific code here...
     settingPath = 'HOME'
 
-class settingsBotCl:
-    minimizeTray = "no"
-    autostartBot = "no"
-    downloadPath = ''
-
-    # конструктор
-    def __init__(self, dP):
-        self.downloadPath = dP  # устанавливаем имя
-
-
-settingsBot = settingsBotCl(config.DOWNLOADPATH)
-
+def imageToString(id, imagePathList):
+    string = ""
+    for imagePath in imagePathList:
+        print(imagePath)
+        # или вы можете использовать подушку
+        image = Image.open(imagePath)
+        # получаем строку
+        string += pytesseract.image_to_string(image, lang='rus+eng')
+    # печатаем
+    if string != "":
+        bot.send_message(id, string)
+    return
 
 @bot.message_handler(commands=['start', 'help'])
 def start_message(message):
@@ -57,8 +52,6 @@ def start_message(message):
 def tor_info_message(message):
     startqtrnt()
     qb = Client(qbithost)
-    print(bottoken.QbUser)
-    print(bottoken.QbPass)
     qb.login(bottoken.QbUser, bottoken.QbPass)
     torrents = qb.torrents()
     for torrent in torrents:
@@ -70,8 +63,6 @@ def tor_info_message(message):
 def tor_info_message(message):
     startqtrnt()
     qb = Client(qbithost)
-    print(bottoken.QbUser)
-    print(bottoken.QbPass)
     qb.login(bottoken.QbUser, bottoken.QbPass)
     torrents = qb.torrents(filter='downloading')
     if not torrents:
@@ -82,9 +73,36 @@ def tor_info_message(message):
     qb.logout()
 
 
+@bot.message_handler(content_types='photo')
+def photo_message(message):
+    mes = "Прислано фото конвертирую ее в тескт"
+    bot.send_message(message.chat.id, mes)
+    slist = []
+    for img in message.photo:
+        print(img.file_size)
+        unique_id = img.file_unique_id
+        print(unique_id)
+        if unique_id[len(unique_id)-1] != "-":
+            continue
+        file_id = img.file_id
+        newFile = bot.get_file(file_id)
+
+        src = config.DOWNLOADPATH + "/" + newFile.file_path
+        print("thea "+src)
+        filepath = os.path.exists(os.path.dirname(src))
+        if not filepath:
+            os.mkdir(os.path.dirname(src))
+        downloaded_file = bot.download_file(newFile.file_path)
+
+        with open(src, 'wb') as new_file:
+            new_file.write(downloaded_file)
+        slist.append(src)
+    imageToString(message.chat.id, slist)
+    return
+
 @bot.message_handler(content_types='document')
 def torrent_message(message):
-    log.append("Получен торрент файл")
+    print("Получен торрент файл")
     mes = 'Привет, ты прислал мне документ:' + message.document.file_name
     bot.send_message(message.chat.id, mes)
     if message.document.file_name.find(".torrent") > 0:
@@ -95,12 +113,6 @@ def torrent_message(message):
         if not filepath:
             os.mkdir(config.DOWNLOADPATH)
         downloaded_file = bot.download_file(newFile.file_path)
-
-        # src = message.document.file_name
-        # with open(config.DOWNLOADPATH + "/" + src, 'wb') as new_file:
-        #     new_file.write(downloaded_file)
-        # mes = "Файл сохранен в " + config.DOWNLOADPATH
-        # bot.send_message(message.chat.id, mes)
 
         # проверим запущен ли bittorrent
         startqtrnt()
@@ -130,24 +142,24 @@ def torrent_message(message):
         if findtorr:
             downloadTorrents.append({'userid': message.chat.id, 'name': findtorr['name']})
         qb.logout()
-        
+
     elif (message.document.file_name.find(".jpg") > 0) or (message.document.file_name.find(".png") > 0):
         mes = "Прислана картинка конвертирую ее в тескт"
         bot.send_message(message.chat.id, mes)
         file_id = message.document.file_id
         newFile = bot.get_file(file_id)
-        
-        filepath = os.path.exists(config.DOWNLOADPATH)
+
+        src = config.DOWNLOADPATH + "/" + newFile.file_path
+        filepath = os.path.exists(os.path.dirname(src))
         if not filepath:
-            os.mkdir(config.DOWNLOADPATH)
+            os.mkdir(os.path.dirname(src))
         downloaded_file = bot.download_file(newFile.file_path)
-        # или вы можете использовать подушку
-        image = Image.open(downloaded_file)
-        # получаем строку
-        string = pytesseract.image_to_string(image, lang='rus+eng')
-        # печатаем
-        bot.send_message(message.chat.id, string)
+
+        with open(src, 'wb') as new_file:
+            new_file.write(downloaded_file)
+        imageToString(message.chat.id, [src])
         return
+
     else:
         mes = "Прислан не тот документ"
         bot.send_message(message.chat.id, mes)
@@ -168,14 +180,14 @@ def startqtrnt():
             break
     # если торрент клиент не запщен то запускаем
     if not find_process:
-        log.append("Запускаем торрент клиент")
+        print("Запускаем торрент клиент")
         if sys.platform.startswith('win32'):
             os.startfile(config.TORRENTCLIENTPATH)
             #time.sleep(3)
         elif sys.platform.startswith('linux'):
             os.system("qbittorrent")
         time.sleep(10)
-        
+
 
 def handle_messages(messages):
     for message in messages:
@@ -186,33 +198,31 @@ def handle_messages(messages):
 
 
 def thread_function(name):
-    log.append("Поток запущен, бот работает")
+    print("Поток запущен, бот работает")
     while True:
         if threadStop:
             # bot.stop_polling()
-            log.append("Бот остановлен: поток")
+            print("Бот остановлен: поток")
             break
         try:
             bot.polling(none_stop=True)
 
         except Exception as e:
             print(e)
-            log.append("Ошбика")
+            print("Ошбика")
             time.sleep(3)
 
 
 def thread_torr(name):
-    log.append("Поток запущен, бот работает")
+    print("Поток запущен, бот работает")
     while True:
         if threadStop:
             # bot.stop_polling()
-            log.append("Бот остановлен: поток")
+            print("Бот остановлен: поток")
             break
         try:
             cont = False
             qb = Client(qbithost)
-            print(bottoken.QbUser)
-            print(bottoken.QbPass)
             qb.login(bottoken.QbUser, bottoken.QbPass)
             torrents = qb.torrents(filter='downloading')
             for dtor in downloadTorrents:
@@ -224,154 +234,17 @@ def thread_torr(name):
                     cont = False
                     continue
                 bot.send_message(dtor['userid'], "Файл " + dtor['name'] + "загружен")
-            
+
             qb.logout()
             time.sleep(20)
 
         except Exception as e:
             print(e)
-            log.append("Ошбика")
+            print("Ошбика")
             time.sleep(3)
 
-
-class MainWindow(QMainWindow):
-    check_box = None
-    tray_icon = None
-
-    botThread = threading.Thread(target=thread_function, args=(1,))
-
-    def __init__(self):
-        QMainWindow.__init__(self)
-        # super(MainWindow, self).__init__()
-        self.ui = Ui_Dialog()
-        self.ui.setupUi(self)
-        self.ui.startBot.clicked.connect(self.startBot)
-        self.ui.stopBot.clicked.connect(self.stopBot)
-
-        start_action = QAction("Start", self)
-        stop_action = QAction('Stop', self)
-        show_action = QAction("Show", self)
-        hide_action = QAction("Hide", self)
-        exit_action = QAction("Exit", self)
-
-        start_action.triggered.connect(self.startBot)
-        stop_action.triggered.connect(self.stopBot)
-        show_action.triggered.connect(self.show)
-        hide_action.triggered.connect(self.hide)
-        exit_action.triggered.connect(qApp.quit)
-
-        tray_menu = QMenu()
-        tray_menu.addAction(start_action)
-        tray_menu.addAction(stop_action)
-        tray_menu.addAction(show_action)
-        tray_menu.addAction(hide_action)
-        tray_menu.addAction(exit_action)
-        # инициализация сворачивания в трей
-        self.tray_icon = QSystemTrayIcon(self)
-        self.tray_icon.setIcon(self.style().standardIcon(QStyle.SP_ComputerIcon))
-
-        self.tray_icon.setContextMenu(tray_menu)
-        self.tray_icon.show()
-
-        global log
-        log = self.ui.logTextBrowser
-
-        # восстановление настроек
-        self.loadSetting()
-        if self.ui.autorunBotcheckBox.isChecked():
-            self.startBot()
-
-        if self.ui.trayCeckBox.isChecked():
-            self.hide()
-            self.tray_icon.showMessage(
-                "Tray program",
-                "Application is minimized to tray",
-                QSystemTrayIcon.Information,
-                2000
-            )
-
-    # переопредение метода closeEvent, для перехвата события закрытия окна
-    # окно будет закрыватья только в том случае если нет, елси нет галочки на чекбосксе
-    def closeEvent(self, event):
-        self.stopBot()
-        self.saveSettingss()
-
-    def hideEvent(self, event):
-        if self.ui.trayCeckBox.isChecked():
-            event.ignore()
-            self.hide()
-            self.tray_icon.showMessage(
-                "Tray program",
-                "Application is minimized to tray",
-                QSystemTrayIcon.Information,
-                2000
-            )
-        self.saveSettingss()
-
-    def showEvent(self, event):
-        self.show()
-
-    def startBot(self):
-        global threadStop
-        threadStop = False
-        self.botThread.start()
-        self.ui.logTextBrowser.append('Бот запущен')
-
-    def stopBot(self):
-        global threadStop
-        bot.stop_bot()
-        threadStop = True
-        self.ui.logTextBrowser.append('Бот остановлен')
-
-    def saveSettingss(self):
-        configp = configparser.ConfigParser()
-        global settingsBot
-
-        if self.ui.trayCeckBox.isChecked():
-            settingsBot.minimizeTray = "yes"
-        else:
-            settingsBot.minimizeTray = "no"
-
-        if self.ui.autorunBotcheckBox.isChecked():
-            settingsBot.autostartBot = "yes"
-        else:
-            settingsBot.autostartBot = "no"
-
-        configp['DEFAULT'] = {'minimizeToTray': settingsBot.minimizeTray,
-                             'autostartBot': settingsBot.autostartBot,
-                             'savePath': settingsBot.downloadPath}
-        setdir = config.SAVESETTINGSPATH % os.environ[settingPath]
-        if not os.path.exists(setdir):
-            os.mkdir(setdir)     
-        log.append("Сохраняем настройка путь:")
-        log.append(setdir)  
-        setdir = setdir + '/settings.ini'
-        with open(setdir, 'w') as configfile:
-            configp.write(configfile)
-
-    def loadSetting(self):
-        setdir = (config.SAVESETTINGSPATH % os.environ[settingPath]) + '/settings.ini'
-        log.append("Загружаем настройка путь:")
-        log.append(setdir)
-        if not os.path.isfile(setdir):
-            return
-        configp = configparser.ConfigParser()
-        try:
-            configp.read(setdir)
-        except Exception as e:
-            os.remove(setdir)
-
-        if configp.get("DEFAULT", "minimizeToTray") == "yes":
-            self.ui.trayCeckBox.setChecked(True)
-        if configp.get("DEFAULT", "autostartBot") == "yes":
-            self.ui.autorunBotcheckBox.setChecked(True)
-        self.ui.pathLineEdit.setText(configp.get("DEFAULT", "savePath"))
-
-
 if __name__ == '__main__':
-    # bot.infinity_polling()
-    # bot.set_update_listener(handle_messages)
-    app = QApplication(sys.argv)
-    mw = MainWindow()
-    mw.show()
-    sys.exit(app.exec())
+    botThread = threading.Thread(target=thread_function, args=(1,))
+    threadStop = False
+    botThread.start()
+    sys.exit()
