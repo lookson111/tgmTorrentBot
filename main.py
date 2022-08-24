@@ -78,25 +78,21 @@ def photo_message(message):
     mes = "Прислано фото конвертирую ее в тескт"
     bot.send_message(message.chat.id, mes)
     slist = []
-    for img in message.photo:
-        print(img.file_size)
-        unique_id = img.file_unique_id
-        print(unique_id)
-        if unique_id[len(unique_id)-1] != "-":
-            continue
-        file_id = img.file_id
-        newFile = bot.get_file(file_id)
+    img = message.photo[len(message.photo) - 1]
+    print(img.file_size)
+    file_id = img.file_id
+    newFile = bot.get_file(file_id)
 
-        src = config.DOWNLOADPATH + "/" + newFile.file_path
-        print("thea "+src)
-        filepath = os.path.exists(os.path.dirname(src))
-        if not filepath:
-            os.mkdir(os.path.dirname(src))
-        downloaded_file = bot.download_file(newFile.file_path)
+    src = config.DOWNLOADPATH + "/" + newFile.file_path
+    print("thea "+src)
+    filepath = os.path.exists(os.path.dirname(src))
+    if not filepath:
+        os.mkdir(os.path.dirname(src))
+    downloaded_file = bot.download_file(newFile.file_path)
 
-        with open(src, 'wb') as new_file:
-            new_file.write(downloaded_file)
-        slist.append(src)
+    with open(src, 'wb') as new_file:
+        new_file.write(downloaded_file)
+    slist.append(src)
     imageToString(message.chat.id, slist)
     return
 
